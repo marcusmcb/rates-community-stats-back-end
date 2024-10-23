@@ -18,7 +18,7 @@ const createSpotifyLink = (artist, title) => {
 
 // Function to load playlists from CSV files and insert them into MongoDB
 const loadPlaylists = async () => {
-	const playlistsDir = path.join(__dirname, './playlists')
+	const playlistsDir = path.join(__dirname, '../playlists')
 
 	// Get all CSV files in the playlists directory
 	const files = fs

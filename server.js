@@ -1,18 +1,21 @@
+// Import necessary modules
 const express = require('express')
 const { createHandler } = require('graphql-http/lib/use/express')
 const { buildSchema } = require('graphql')
 const { ruruHTML } = require('ruru/server')
+const dotenv = require('dotenv')
 
+// Load environment variables
+dotenv.config()
+
+// Import helper functions and database connection
 const loadPlaylists = require('./helpers/loadPlaylists')
 const trackCollection = require('./database/getTrackCollection')
 
-const dotenv = require('dotenv')
-
-dotenv.config()
-
+// Define server port
 const PORT = process.env.PORT || 4000
 
-// main GraphQL schema
+// Main GraphQL schema
 const schema = buildSchema(`
   type Track {
     title: String
@@ -31,7 +34,7 @@ const schema = buildSchema(`
   }
 `)
 
-// the root provides a resolver function for each GraphQL API endpoint
+// Resolver functions for each GraphQL API endpoint
 const root = {
 	async searchByArtist({ artist }) {
 		try {
@@ -69,12 +72,10 @@ const root = {
 	async getPlaylistTracks({ playlist_date }) {
 		try {
 			const { collection, client } = await trackCollection()
-
 			const tracks = await collection
 				.find({ playlist_date })
 				.sort({ original_track_order: 1 })
 				.toArray()
-
 			await client.close()
 			return tracks
 		} catch (error) {
@@ -84,9 +85,10 @@ const root = {
 	},
 }
 
+// Initialize Express app
 const app = express()
 
-// create & use the main GraphQL handler
+// Create & use the main GraphQL handler
 app.all(
 	'/graphql',
 	createHandler({
@@ -95,12 +97,26 @@ app.all(
 	})
 )
 
-app.get('/', async (_req, res) => {
-	// console.log(loadPlaylists())
+// // Optional endpoint for loading playlists into MongoDB
+// app.get('/load-playlists', async (_req, res) => {
+// 	try {
+// 		const result = await loadPlaylists() // Ensure this method loads data into MongoDB correctly.
+// 		res.status(200).json({ message: 'Playlists loaded successfully', result })
+// 	} catch (error) {
+// 		console.error('Error loading playlists:', error)
+// 		res.status(500).json({ error: 'Failed to load playlists' })
+// 	}
+// })
+
+// Default route for GraphQL Playground or landing page
+app.get('/', (_req, res) => {
 	res.type('html')
 	res.end(ruruHTML({ endpoint: '/graphql' }))
 })
 
-// Start the server at port
-app.listen(PORT)
-console.log('Running a GraphQL API server at http://localhost:4000/graphql')
+// Start the server at specified port
+app.listen(PORT, () => {
+	console.log(
+		`🚀 Running a GraphQL API server at http://localhost:${PORT}/graphql`
+	)
+})
