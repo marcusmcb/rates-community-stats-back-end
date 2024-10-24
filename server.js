@@ -23,6 +23,7 @@ const schema = buildSchema(`
     spotify_link: String
     playlist_date: String
     playlist_date_obj: Date
+		playlist_number: Int
   }
 
   type Query {
