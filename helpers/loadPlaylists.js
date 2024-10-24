@@ -18,27 +18,29 @@ const createSpotifyLink = (artist, title) => {
 }
 
 const loadPlaylists = async () => {
-	const playlistsDir = path.join(__dirname, '../playlists')	
+	const playlistsDir = path.join(__dirname, '../playlists')
 	const files = fs
 		.readdirSync(playlistsDir)
 		.filter((file) => file.endsWith('.csv'))
+
 	try {
-		// connect to MongoDB
+		// Connect to MongoDB
 		const client = new MongoClient(mongoUri, { tls: true })
 		await client.connect()
 		const db = client.db('rates-community-stats')
 		const collection = db.collection('tracks')
 
-		// clear the existing collection to avoid duplicates
+		// Clear the existing collection to avoid duplicates
 		await collection.deleteMany({})
 		console.log('Existing playlists collection cleared.')
 
-		// iterate over each CSV file
+		// Iterate over each CSV file
 		for (const file of files) {
-			const playlistDate = extractDateFromFilename(file)
+			const { playlistNumber, playlistDate } =
+				extractPlaylistInfoFromFilename(file)
 			const playlistDateObj = convertToDateObject(playlistDate)
 			const playlistTracks = await parseCSVFile(path.join(playlistsDir, file))
-			
+
 			for (let index = 0; index < playlistTracks.length; index++) {
 				const track = playlistTracks[index]
 				const spotifyLink = createSpotifyLink(track.artist, track.title)
@@ -48,15 +50,18 @@ const loadPlaylists = async () => {
 					playlist_date_obj: playlistDateObj,
 					original_track_order: index + 1,
 					spotify_link: spotifyLink,
-				}				
+					playlist_number: playlistNumber, // Add the playlist number here
+				}
+
 				const result = await collection.insertOne(trackData)
 				console.log('Track inserted with ID:', result.insertedId)
 				console.log(trackData)
-				// introduce a small delay between inserts (e.g., 50ms)
-				// to avoid any MongoDB API rate limits
+
+				// Introduce a small delay between inserts (e.g., 50ms)
 				await delay(50)
 			}
-		}	
+		}
+
 		await client.close()
 		console.log('All playlists have been loaded and inserted.')
 	} catch (error) {
@@ -64,15 +69,21 @@ const loadPlaylists = async () => {
 	}
 }
 
+// Helper function to introduce a delay
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const extractDateFromFilename = (filename) => {
-	const match = filename.match(/rate_wonder_spotify_stream_(\w+_\d{4})\.csv/)
+// Updated helper function to extract playlist number and date from the filename
+const extractPlaylistInfoFromFilename = (filename) => {
+	const match = filename.match(
+		/rate_wonder_spotify_stream_(\d+)_(\w+_\d{4})\.csv/
+	)
 	if (match) {
-		const [month, year] = match[1].split('_')
-		return `${capitalize(month)} ${year}` // e.g., "April 2024"
+		const playlistNumber = parseInt(match[1], 10) // Extract and convert the number to an integer
+		const [month, year] = match[2].split('_')
+		const playlistDate = `${capitalize(month)} ${year}` // e.g., "April 2024"
+		return { playlistNumber, playlistDate }
 	}
-	return 'Unknown'
+	return { playlistNumber: null, playlistDate: 'Unknown' }
 }
 
 const convertToDateObject = (dateString) => {
