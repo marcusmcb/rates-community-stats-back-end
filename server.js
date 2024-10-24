@@ -55,7 +55,10 @@ const root = {
 	async searchByArtist({ artist }) {
 		try {
 			const { collection, client } = await trackCollection()
-			const regex = new RegExp(`\\b${artist}\\b`, 'i')
+			const escapedArtist = artist
+				.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+				.replace(/\s+/g, '[\\s-]')
+			const regex = new RegExp(`\\b${escapedArtist}\\b`, 'i')
 			const tracks = await collection
 				.find({ artist: { $regex: regex } })
 				.sort({ playlist_date_obj: -1 })
@@ -127,7 +130,7 @@ app.all(
 // endpoint to load playlists into MongoDB
 app.get('/load-playlists', async (_req, res) => {
 	try {
-		const result = await loadPlaylists() // Ensure this method loads data into MongoDB correctly.
+		const result = await loadPlaylists()
 		res.status(200).json({ message: 'Playlists loaded successfully', result })
 	} catch (error) {
 		console.error('Error loading playlists:', error)

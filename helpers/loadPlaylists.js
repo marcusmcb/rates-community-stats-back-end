@@ -50,13 +50,11 @@ const loadPlaylists = async () => {
 					playlist_date_obj: playlistDateObj,
 					original_track_order: index + 1,
 					spotify_link: spotifyLink,
-					playlist_number: playlistNumber, // Add the playlist number here
+					playlist_number: playlistNumber
 				}
-
 				const result = await collection.insertOne(trackData)
 				console.log('Track inserted with ID:', result.insertedId)
 				console.log(trackData)
-
 				// Introduce a small delay between inserts (e.g., 50ms)
 				await delay(50)
 			}
@@ -69,18 +67,16 @@ const loadPlaylists = async () => {
 	}
 }
 
-// Helper function to introduce a delay
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// Updated helper function to extract playlist number and date from the filename
 const extractPlaylistInfoFromFilename = (filename) => {
 	const match = filename.match(
 		/rate_wonder_spotify_stream_(\d+)_(\w+_\d{4})\.csv/
 	)
 	if (match) {
-		const playlistNumber = parseInt(match[1], 10) // Extract and convert the number to an integer
+		const playlistNumber = parseInt(match[1], 10)
 		const [month, year] = match[2].split('_')
-		const playlistDate = `${capitalize(month)} ${year}` // e.g., "April 2024"
+		const playlistDate = `${capitalize(month)} ${year}`
 		return { playlistNumber, playlistDate }
 	}
 	return { playlistNumber: null, playlistDate: 'Unknown' }
