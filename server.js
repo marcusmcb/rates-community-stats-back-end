@@ -3,6 +3,7 @@ const { createHandler } = require('graphql-http/lib/use/express')
 const { buildSchema, GraphQLScalarType, Kind } = require('graphql')
 const { ruruHTML } = require('ruru/server')
 const dotenv = require('dotenv')
+const cors = require('cors')
 
 dotenv.config()
 
@@ -118,6 +119,7 @@ const root = {
 }
 
 const app = express()
+app.use(cors())
 
 app.all(
 	'/graphql',
