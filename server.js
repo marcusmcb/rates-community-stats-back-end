@@ -31,6 +31,7 @@ const schema = buildSchema(`
     searchByTitle(title: String): [Track]
     searchByAdded(added: String): [Track]
     getPlaylistTracks(playlist_date: String): [Track]
+		totalSongs: Int
   }
 `)
 
@@ -58,9 +59,15 @@ const root = {
 		try {
 			const { collection, client } = await trackCollection()
 			const escapedArtist = artist
-				.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-				.replace(/\s+/g, '[\\s-]')
-			const regex = new RegExp(`\\b${escapedArtist}\\b`, 'i')
+				.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape special characters for safe regex
+				.replace(/\s+/g, '[\\s-]') // Handle spaces and dashes
+
+			// Add optional period handling with \.? for cases like "Dr Dre" and "Dr. Dre"
+			const regex = new RegExp(
+				`\\b${escapedArtist.replace(/\\s/, '\\.?\\s')}\\b`,
+				'i'
+			)
+
 			const tracks = await collection
 				.find({ artist: { $regex: regex } })
 				.sort({ playlist_date_obj: -1 })
@@ -115,6 +122,17 @@ const root = {
 		} catch (error) {
 			console.error('Error retrieving tracks for playlist:', error)
 			return []
+		}
+	},
+	async totalSongs() {
+		try {
+			const { collection, client } = await trackCollection()
+			const count = await collection.countDocuments() // Count all documents in the tracks collection
+			await client.close()
+			return count
+		} catch (error) {
+			console.error('Error counting songs:', error)
+			return 0 // Return 0 in case of an error
 		}
 	},
 }
