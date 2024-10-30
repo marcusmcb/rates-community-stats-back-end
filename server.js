@@ -32,6 +32,7 @@ const schema = buildSchema(`
     searchByAdded(added: String): [Track]
     getPlaylistTracks(playlist_date: String): [Track]
 		totalSongs: Int
+		countByAdded(added: String!): Int
   }
 `)
 
@@ -133,6 +134,17 @@ const root = {
 		} catch (error) {
 			console.error('Error counting songs:', error)
 			return 0 // Return 0 in case of an error
+		}
+	},
+	async countByAdded({ added }) {
+		try {
+			const { collection, client } = await trackCollection()
+			const count = await collection.countDocuments({ added })
+			await client.close()
+			return count
+		} catch (error) {
+			console.error('Error counting tracks by "added" value:', error)
+			return 0
 		}
 	},
 }
