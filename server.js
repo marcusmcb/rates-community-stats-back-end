@@ -36,6 +36,11 @@ const schema = buildSchema(`
   	trackCount: Int
 	}
 
+	type TitleCount {
+  	title: String
+  	playCount: Int
+	}
+
   type Query {
     searchByArtist(artist: String): [Track]
     searchByTitle(title: String): [Track]
@@ -44,6 +49,7 @@ const schema = buildSchema(`
 		totalSongs: Int
 		mostTracksByUser: [UserTrackCount]
 		mostPlayedArtists: [ArtistCount]
+		mostPlayedTitles: [TitleCount]
   }
 `)
 
@@ -202,6 +208,40 @@ const root = {
 			}))
 		} catch (error) {
 			console.error('Error retrieving most played artists:', error)
+			return []
+		}
+	},
+	async mostPlayedTitles() {
+		try {
+			const { collection, client } = await trackCollection()
+			const titles = await collection
+				.aggregate([
+					// Step 1: Normalize title by removing text in parentheses or after hyphens
+					{
+						$project: {
+							normalizedTitle: {
+								$trim: {
+									input: { $arrayElemAt: [{ $split: ['$title', /[-(]/] }, 0] },
+								},
+							},
+						},
+					},
+					// Step 2: Group by normalized title and count occurrences
+					{ $group: { _id: '$normalizedTitle', playCount: { $sum: 1 } } },
+					// Step 3: Filter for titles with more than one play
+					{ $match: { playCount: { $gt: 1 } } },
+					// Step 4: Sort by playCount in descending order and limit to top 10
+					{ $sort: { playCount: -1 } },
+					{ $limit: 10 },
+				])
+				.toArray()
+			await client.close()
+			return titles.map((title) => ({
+				title: title._id,
+				playCount: title.playCount,
+			}))
+		} catch (error) {
+			console.error('Error retrieving most played titles:', error)
 			return []
 		}
 	},
