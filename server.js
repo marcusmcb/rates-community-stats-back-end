@@ -26,13 +26,18 @@ const schema = buildSchema(`
 		playlist_number: Int
   }
 
+	type UserTrackCount {
+    added: String!
+    trackCount: Int!
+  }
+
   type Query {
     searchByArtist(artist: String): [Track]
     searchByTitle(title: String): [Track]
     searchByAdded(added: String): [Track]
     getPlaylistTracks(playlist_date: String): [Track]
 		totalSongs: Int
-		countByAdded(added: String!): Int
+		mostTracksByUser: [UserTrackCount]
   }
 `)
 
@@ -136,15 +141,34 @@ const root = {
 			return 0 // Return 0 in case of an error
 		}
 	},
-	async countByAdded({ added }) {
+	async mostTracksByUser() {
 		try {
 			const { collection, client } = await trackCollection()
-			const count = await collection.countDocuments({ added })
+			const result = await collection
+				.aggregate([
+					{
+						$group: {
+							_id: '$added',
+							trackCount: { $sum: 1 }, // Count the number of tracks each user added
+						},
+					},
+					{
+						$project: {
+							added: '$_id',
+							trackCount: 1,
+						},
+					},
+					{
+						$sort: { trackCount: -1 }, // Sort by track count in descending order
+					},
+				])
+				.toArray()
+
 			await client.close()
-			return count
+			return result
 		} catch (error) {
-			console.error('Error counting tracks by "added" value:', error)
-			return 0
+			console.error('Error retrieving most tracks by user:', error)
+			return []
 		}
 	},
 }
