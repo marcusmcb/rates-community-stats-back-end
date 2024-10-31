@@ -38,6 +38,7 @@ const schema = buildSchema(`
 
 	type TitleCount {
   	title: String
+		artist: String
   	playCount: Int
 	}
 
@@ -216,24 +217,38 @@ const root = {
 			const { collection, client } = await trackCollection()
 			const titles = await collection
 				.aggregate([
-					// Step 1: Normalize title by removing text in parentheses or after hyphens
+					// Step 1: Normalize title by removing text in parentheses
 					{
 						$project: {
 							normalizedTitle: {
 								$trim: {
 									input: {
-										$replaceAll: {
-											input: '$title',
-											find: /\s*[-(].*$/,
-											replacement: '',
+										$cond: {
+											if: {
+												$regexFind: { input: '$title', regex: /\s*\(.*\)$/ },
+											},
+											then: {
+												$substrCP: [
+													'$title',
+													0,
+													{ $indexOfCP: ['$title', ' ('] },
+												],
+											},
+											else: '$title',
 										},
 									},
 								},
 							},
+							artist: 1, // Include artist field in the projection
 						},
 					},
-					// Step 2: Group by normalized title and count occurrences
-					{ $group: { _id: '$normalizedTitle', playCount: { $sum: 1 } } },
+					// Step 2: Group by normalized title and artist, count occurrences
+					{
+						$group: {
+							_id: { title: '$normalizedTitle', artist: '$artist' },
+							playCount: { $sum: 1 },
+						},
+					},
 					// Step 3: Filter for titles with more than one play
 					{ $match: { playCount: { $gt: 1 } } },
 					// Step 4: Sort by playCount in descending order and limit to top 10
@@ -242,9 +257,12 @@ const root = {
 				])
 				.toArray()
 			await client.close()
-			return titles.map((title) => ({
-				title: title._id,
-				playCount: title.playCount,
+
+			// Map result to return the title, artist, and play count in a clear format
+			return titles.map((item) => ({
+				title: item._id.title,
+				artist: item._id.artist,
+				playCount: item.playCount,
 			}))
 		} catch (error) {
 			console.error('Error retrieving most played titles:', error)
