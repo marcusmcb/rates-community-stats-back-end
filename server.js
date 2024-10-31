@@ -182,7 +182,15 @@ const root = {
 			const { collection, client } = await trackCollection()
 			const artists = await collection
 				.aggregate([
-					{ $group: { _id: '$artist', trackCount: { $sum: 1 } } },
+					// Step 1: Split the artist field by commas and trim whitespace
+					{ $project: { artists: { $split: ['$artist', ','] } } },
+					// Step 2: Unwind the array to create a document per artist
+					{ $unwind: '$artists' },
+					// Step 3: Trim whitespace from each artist name
+					{ $set: { artists: { $trim: { input: '$artists' } } } },
+					// Step 4: Group by artist name and count occurrences
+					{ $group: { _id: '$artists', trackCount: { $sum: 1 } } },
+					// Step 5: Sort by trackCount in descending order and limit to top 10
 					{ $sort: { trackCount: -1 } },
 					{ $limit: 10 },
 				])
