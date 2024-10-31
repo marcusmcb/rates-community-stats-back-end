@@ -31,6 +31,11 @@ const schema = buildSchema(`
     trackCount: Int!
   }
 
+	type ArtistCount {
+  	artist: String
+  	trackCount: Int
+	}
+
   type Query {
     searchByArtist(artist: String): [Track]
     searchByTitle(title: String): [Track]
@@ -38,6 +43,7 @@ const schema = buildSchema(`
     getPlaylistTracks(playlist_date: String): [Track]
 		totalSongs: Int
 		mostTracksByUser: [UserTrackCount]
+		mostPlayedArtists: [ArtistCount]
   }
 `)
 
@@ -168,6 +174,26 @@ const root = {
 			return result
 		} catch (error) {
 			console.error('Error retrieving most tracks by user:', error)
+			return []
+		}
+	},
+	async mostPlayedArtists() {
+		try {
+			const { collection, client } = await trackCollection()
+			const artists = await collection
+				.aggregate([
+					{ $group: { _id: '$artist', trackCount: { $sum: 1 } } },
+					{ $sort: { trackCount: -1 } },
+					{ $limit: 10 },
+				])
+				.toArray()
+			await client.close()
+			return artists.map((artist) => ({
+				artist: artist._id,
+				trackCount: artist.trackCount,
+			}))
+		} catch (error) {
+			console.error('Error retrieving most played artists:', error)
 			return []
 		}
 	},
