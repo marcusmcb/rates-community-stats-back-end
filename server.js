@@ -221,7 +221,13 @@ const root = {
 						$project: {
 							normalizedTitle: {
 								$trim: {
-									input: { $arrayElemAt: [{ $split: ['$title', /[-(]/] }, 0] },
+									input: {
+										$replaceAll: {
+											input: '$title',
+											find: /\s*[-(].*$/,
+											replacement: '',
+										},
+									},
 								},
 							},
 						},
