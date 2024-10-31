@@ -174,6 +174,7 @@ const root = {
 					{
 						$sort: { trackCount: -1 }, // Sort by track count in descending order
 					},
+					{ $limit: 15 },
 				])
 				.toArray()
 
@@ -199,7 +200,7 @@ const root = {
 					{ $group: { _id: '$artists', trackCount: { $sum: 1 } } },
 					// Step 5: Sort by trackCount in descending order and limit to top 10
 					{ $sort: { trackCount: -1 } },
-					{ $limit: 10 },
+					{ $limit: 15 },
 				])
 				.toArray()
 			await client.close()
