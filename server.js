@@ -8,6 +8,7 @@ const cors = require('cors')
 dotenv.config()
 
 const loadPlaylists = require('./helpers/loadPlaylists')
+
 const trackCollection = require('./database/getTrackCollection')
 
 const PORT = process.env.PORT || 4000
@@ -273,6 +274,7 @@ const root = {
 }
 
 const app = express()
+
 app.use(cors())
 
 app.all(
